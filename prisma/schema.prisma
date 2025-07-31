@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum Provider {
+  CREDENTIALS
+  GOOGLE
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  email               String   @unique
+  fullName            String?
+  avatarUrl           String?
+  passwordHash        String?
+  googleId            String?
+  provider            Provider @default(CREDENTIALS)
+  role                Role     @default(USER)
+  isEmailVerified     Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  sessions            Session[]
+  verificationTokens  EmailVerificationToken[]
+}
+
+
+
+model Session {
+  id               String   @id @default(uuid())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  signatureHash  String   
+  isRevoked        Boolean  @default(false)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([signatureHash])
+  @@unique([userId, signatureHash])
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  token      String   @unique // hashed token (SHA256)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+
